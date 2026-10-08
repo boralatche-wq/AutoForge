@@ -1,0 +1,67 @@
+{
+  "regras": [
+    {
+      "nome": "BACH",
+      "ativo": true,
+      "tipo_arquivo": "xlsx",
+      "padrao_nome": "COMPOSICAO_FIDC_SOMACRED_BACH*",
+      "leitura": {
+        "aba": "Cotas Superiores",
+        "orientacao": "horizontal",
+        "modo": "buscar_cabecalho",
+        "palavras_chave_cabecalho": [
+          "Mnemônico",
+          "Qtde. Total",
+          "Valor Cota",
+          "Valor Total",
+          "%PL"
+        ]
+      },
+      "colunas_saida": {
+        "FUNDO": {
+          "aba": "Parâmetros",
+          "orientacao": "vertical",
+          "origem": "Carteira",
+          "fixo": true
+        },
+        "DATA": {
+          "aba": "Parâmetros",
+          "orientacao": "vertical",
+          "origem": "Data Posição",
+          "fixo": true
+        },
+        "COTA_NOME": {
+          "aba": "Cotas Superiores",
+          "orientacao": "horizontal",
+          "origem": "Mnemônico",
+          "fixo": false
+        },
+        "Qtde. Total": {
+          "aba": "Cotas Superiores",
+          "orientacao": "horizontal",
+          "origem": "Qtde. Total",
+          "fixo": false
+        },
+        "Valor Cota": {
+          "aba": "Cotas Superiores",
+          "orientacao": "horizontal",
+          "origem": "Valor Cota",
+          "fixo": false
+        },
+        "Valor Total": {
+          "aba": "Cotas Superiores",
+          "orientacao": "horizontal",
+          "origem": "Valor Total",
+          "fixo": false
+        },
+        "%PL": {
+          "aba": "Cotas Superiores",
+          "orientacao": "horizontal",
+          "origem": "%PL",
+          "fixo": false
+        }
+      },
+      "saida_csv": "normalização.csv"
+    }
+  ]
+}

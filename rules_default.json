@@ -1,0 +1,129 @@
+{
+  "regras": [
+    {
+      "tipo": "grupo",
+      "nome": "FIDC SOMACRED BACH",
+      "regras": [
+        {
+          "nome": "BACH - PosicaoFechamento (CSV)",
+          "ativo": true,
+          "tipo_arquivo": "csv",
+          "padrao_nome": "PosicaoFechamento*.csv",
+          "leitura": { "separador": ";", "encoding": "utf-8", "decimal": "," },
+          "filtro_linhas": { "coluna": "Ativo", "contem": "COTA", "case_sensitive": false },
+          "colunas_saida": {
+            "Mnemônico": { "origem": "Ativo" },
+            "Valor Cota": { "calculo": "ValorBruto / QtdeTotal" },
+            "DataPosicao": { "origem": "DataPosicao" },
+            "Carteira": { "valor_fixo": "FIDC SOMACRED BACH" },
+            "Fonte": { "valor_fixo": "PosicaoFechamento" }
+          },
+          "normalizacao": { "colunas_numericas_br": ["Valor Cota"] },
+          "saida_csv": "FIDC_SOMACRED_BACH.csv"
+        },
+        {
+          "nome": "BACH - Composição (Excel, alternativa)",
+          "ativo": true,
+          "tipo_arquivo": "xlsx",
+          "padrao_nome": "COMPOSICAO_FIDC_SOMACRED_BACH*.xlsx",
+          "leitura": { "modo": "direto", "aba": "Cotas Superiores", "pular_linhas": 1, "orientacao": "horizontal" },
+          "fontes_auxiliares": [
+            {
+              "modo": "chave_valor",
+              "aba": "Parâmetros",
+              "metadados": {
+                "carteira": { "chave_contem": "carteira" },
+                "data_posicao": { "chave_contem": "data posição" },
+                "valor_cota_liquida": { "chave_contem": "valor da cota líquida" }
+              }
+            }
+          ],
+          "colunas_saida": {
+            "Mnemônico": { "aba": "Cotas Superiores", "origem": "Mnemônico", "fixo": false, "orientacao": "horizontal" },
+            "Valor Cota": { "aba": "Cotas Superiores", "origem": "Valor Cota", "fixo": false, "orientacao": "horizontal" },
+            "DataPosicao": { "de_metadado": "data_posicao" },
+            "Carteira": { "de_metadado": "carteira" },
+            "Fonte": { "valor_fixo": "ComposicaoFIDC" }
+          },
+          "linha_extra_se_metadado": {
+            "condicao": "valor_cota_liquida",
+            "colunas": {
+              "Mnemônico": { "valor_fixo": "Subordinada" },
+              "Valor Cota": { "de_metadado": "valor_cota_liquida" },
+              "DataPosicao": { "de_metadado": "data_posicao" },
+              "Carteira": { "de_metadado": "carteira" },
+              "Fonte": { "valor_fixo": "ComposicaoFIDC" }
+            }
+          },
+          "normalizacao": { "colunas_numericas_br": ["Valor Cota"] },
+          "saida_csv": "FIDC_SOMACRED_BACH.csv"
+        }
+      ]
+    },
+    {
+      "nome": "FIDC SOMACRED II",
+      "ativo": true,
+      "tipo_arquivo": "xlsx",
+      "padrao_nome": "FIDC_SOMACRED_II*.xlsx",
+      "leitura": { "modo": "direto", "aba": "Patrimonio", "orientacao": "horizontal" },
+      "colunas_saida": {
+        "Classe Cota": { "aba": "Patrimonio", "origem": "Classe Cota", "fixo": false, "orientacao": "horizontal" },
+        "Valor Liquido": { "aba": "Patrimonio", "origem": "Valor Liquido", "fixo": false, "orientacao": "horizontal" },
+        "Quantidade": { "aba": "Patrimonio", "origem": "Quantidade", "fixo": false, "orientacao": "horizontal" },
+        "Valor Cota": { "aba": "Patrimonio", "origem": "Valor Cota", "fixo": false, "orientacao": "horizontal" },
+        "Fundo": { "aba": "Fundo", "origem": "Fundo", "fixo": true, "orientacao": "horizontal" },
+        "Data Posição": { "aba": "Fundo", "origem": "Data Posição", "fixo": true, "orientacao": "horizontal" }
+      },
+      "normalizacao": { "colunas_numericas_br": ["Valor Cota"] },
+      "saida_csv": "FIDC_SOMACRED_II.csv"
+    },
+    {
+      "nome": "FIDC SOMACRED SABEMI III (PDF)",
+      "ativo": true,
+      "tipo_arquivo": "pdf",
+      "padrao_nome": "*_FIDC SOMACRED SABEMI*.pdf",
+      "leitura": {
+        "modo": "auto",
+        "orientacao": "horizontal",
+        "metadados_regex": {
+          "nome_fundo": { "ancora_apos_linha": "Acompanhamento de Cotas" },
+          "data_referencia": { "regex": "Data de Referência:\\s*(\\d{2}/\\d{2}/\\d{4})" }
+        }
+      },
+      "colunas_saida": {
+        "Fundo": { "de_metadado": "nome_fundo" },
+        "DataRef": { "de_metadado": "data_referencia" },
+        "Data": { "origem": "Data" },
+        "PU": { "origem": "PU" },
+        "%Dia": { "origem": "%Dia" },
+        "%CDI_Dia": { "origem": "%CDI_Dia" },
+        "%Mes": { "origem": "%Mes" },
+        "%CDI_Mes": { "origem": "%CDI_Mes" },
+        "%Ano": { "origem": "%Ano" },
+        "%CDI_Ano": { "origem": "%CDI_Ano" }
+      },
+      "normalizacao": { "colunas_numericas_br": ["PU"] },
+      "saida_csv": "FIDC_SOMACRED_SABEMI_III.csv"
+    },
+    {
+      "nome": "ANGA SABEMI VI FIDC",
+      "ativo": true,
+      "tipo_arquivo": "xlsx",
+      "padrao_nome": "*ANGA_SABEMI_VI_FIDC*.xlsx",
+      "leitura": {
+        "modo": "buscar_cabecalho",
+        "aba": "Patrimonio",
+        "palavras_chave_cabecalho": ["CLASSE COTA"],
+        "orientacao": "horizontal"
+      },
+      "colunas_saida": {
+        "Classe Cota": { "aba": "Patrimonio", "origem": "Classe Cota", "fixo": false, "orientacao": "horizontal" },
+        "Valor Cota": { "aba": "Patrimonio", "origem": "Valor Cota", "fixo": false, "orientacao": "horizontal" },
+        "Fundo": { "aba": "Fundo", "origem": "Fundo", "fixo": true, "orientacao": "horizontal" },
+        "Data Posição": { "aba": "Fundo", "origem": "Data Posição", "fixo": true, "orientacao": "horizontal" }
+      },
+      "normalizacao": { "colunas_numericas_br": ["Valor Cota"] },
+      "saida_csv": "ANGA_SABEMI_VI_FIDC.csv"
+    }
+  ]
+}

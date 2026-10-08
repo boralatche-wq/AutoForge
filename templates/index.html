@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoForge — normalização de dados</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+
+    <svg
+      class="brand-mark"
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+
+      <!-- TRIÂNGULO GRANDE (com recorte em S) -->
+      <path class="brand-symbol" fill="url(#g1)"
+        d="M27 4
+           L43.5 39.5
+           C44.2 41 43.3 42 42 42
+           H30
+           C31 38 30 35 28 31.5
+           L20.5 19
+           C18.5 15.5 18.8 12.5 20.8 9.5
+           L25.4 4.6
+           C25.9 3.8 26.7 3.6 27 4 Z"/>
+
+      <!-- LISTRA 3 (maior, mais perto do S) -->
+      <path class="brand-symbol" fill="url(#g1)"
+        d="M14 42 H17.5 L25 29 H21.5 Z"/>
+
+      <!-- LISTRA 2 (média) -->
+      <path class="brand-symbol" fill="url(#g1)"
+        d="M9 42 H12.5 L17.7 33 H14.2 Z"/>
+
+      <!-- LISTRA 1 (menor) -->
+      <path class="brand-symbol" fill="url(#g1)"
+        d="M4 42 H7.5 L10.4 37 H6.9 Z"/>
+
+      <!-- BOLINHAS — NÃO REMOVER (usadas pelo JavaScript)
+           cores: --spark-1 e --spark-2 no style.css -->
+      <circle cx="35" cy="30" r="2"   class="spark s1"/>
+      <circle cx="39" cy="25" r="1.4" class="spark s2"/>
+      <circle cx="37" cy="36" r="1.2" class="spark s3"/>
+
+      <!-- GRADIENTE — cores: --logo-start e --logo-end no style.css -->
+      <defs>
+        <linearGradient id="g1" x1="5" y1="4" x2="43" y2="42" gradientUnits="userSpaceOnUse">
+          <stop offset="0" class="logo-stop-start"/>
+          <stop offset="1" class="logo-stop-end"/>
+        </linearGradient>
+      </defs>
+
+    </svg>
+
+    <div>
+      <div class="brand-name">ETL Sabemi</div>
+      <div class="brand-tag">
+        extração &amp; normalização de dados, por regra alimentado por power automate
+      </div>
+    </div>
+
+  </div>
+
+  <div class="topbar-actions">
+    <a class="btn btn-ghost" href="/download/app-zip">
+      Baixar app (.zip)
+    </a>
+  </div>
+</header>
+
+<main>
+
+  <!-- ================= UPLOAD ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>01 — Arquivos</h2>
+      <span class="hint">arraste CSV, Excel ou PDF para a zona abaixo</span>
+    </div>
+
+    <div id="dropzone" class="dropzone">
+      <input id="input-arquivos" type="file" multiple hidden>
+      <div class="dropzone-inner">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <path class="dz-arrow" d="M20 6v18M20 6l-7 7M20 6l7 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="dz-tray" d="M6 26v6a2 2 0 002 2h24a2 2 0 002-2v-6" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <p><strong>Solte os arquivos aqui</strong> ou clique para escolher</p>
+        <p class="dropzone-sub">.csv · .xlsx · .pdf — qualquer nome, contanto que uma regra reconheça o padrão</p>
+      </div>
+    </div>
+
+    <div class="lista-titulo">
+      <span>Fila para processar <span class="badge" id="cnt-arquivos">{{ arquivos|length }}</span></span>
+    </div>
+    <ul id="lista-arquivos" class="file-list scroll-list" data-vazio="nenhum arquivo na fila">{%- for arq in arquivos %}<li data-nome="{{ arq }}"><span class="file-name">{{ arq }}</span><button class="file-remove" data-nome="{{ arq }}" title="Remover">×</button></li>{%- endfor %}</ul>
+
+    <p id="aviso-triagem" class="triagem-aviso hidden"></p>
+
+    <div class="triagem-grid">
+      <div class="triagem-box">
+        <div class="triagem-head">
+          <span class="triagem-titulo">Rejeitados <span class="badge" id="cnt-rejeitados">{{ rejeitados|length }}</span></span>
+          <button id="btn-apagar-rejeitados" class="btn btn-mini btn-danger" {{ '' if rejeitados else 'disabled' }}>Apagar rejeitados</button>
+        </div>
+        <p class="triagem-desc">Nome fora do padrão de qualquer regra. Separados automaticamente (pasta <code>rejeitados</code>).</p>
+        <ul id="lista-rejeitados" class="file-list file-list-compact scroll-list" data-vazio="nenhum rejeitado">{%- for arq in rejeitados %}<li><span class="file-name">{{ arq }}</span></li>{%- endfor %}</ul>
+      </div>
+
+      <div class="triagem-box">
+        <div class="triagem-head">
+          <span class="triagem-titulo">Já processados <span class="badge" id="cnt-apagar">{{ apagar|length }}</span></span>
+          <button id="btn-apagar-processados" class="btn btn-mini btn-danger" {{ '' if apagar else 'disabled' }}>Apagar já processados</button>
+        </div>
+        <p class="triagem-desc">Nomes que constam em <code>ja_processados.txt</code>. Separados automaticamente (pasta <code>apagar</code>).</p>
+        <ul id="lista-apagar" class="file-list file-list-compact scroll-list" data-vazio="nenhum arquivo para apagar">{%- for arq in apagar %}<li><span class="file-name">{{ arq }}</span></li>{%- endfor %}</ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= REGRAS ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>02 — Regras</h2>
+      <span class="hint">cada regra descreve como reconhecer e mapear uma fonte de dados</span>
+      <button id="btn-nova-regra" class="btn btn-accent">+ Nova regra</button>
+    </div>
+
+    <div id="lista-regras" class="rule-list">
+      {% for r in regras %}
+      <div class="rule-card {{ 'rule-off' if not r.ativo else '' }}" data-nome="{{ r.nome }}">
+        <div class="rule-row">
+          <label class="switch">
+            <input type="checkbox" class="rule-toggle" data-nome="{{ r.nome }}" {{ 'checked' if r.ativo else '' }}>
+            <span class="switch-track"><span class="switch-thumb"></span></span>
+          </label>
+          <div class="rule-info">
+            <div class="rule-nome">{{ r.nome }}{% if r.grupo %} <span class="rule-grupo">· grupo {{ r.grupo }}</span>{% endif %}</div>
+            <div class="rule-meta">
+              <span class="tag tag-{{ r.tipo_arquivo }}">{{ r.tipo_arquivo }}</span>
+              <code>{{ r.padrao_nome }}</code>
+              <span class="rule-arrow">→</span>
+              <code>{{ r.saida_csv }}</code>
+            </div>
+          </div>
+          <div class="rule-actions">
+            <button class="btn btn-mini btn-editar-regra" data-nome="{{ r.nome }}">editar</button>
+            <button class="btn btn-mini btn-excluir-regra" data-nome="{{ r.nome }}">excluir</button>
+          </div>
+        </div>
+        <textarea class="rule-json hidden" data-nome="{{ r.nome }}" spellcheck="false">{{ r | tojson(indent=2) }}</textarea>
+      </div>
+      {% else %}
+      <p class="empty-msg">Nenhuma regra cadastrada ainda.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- ================= NOVA REGRA (form) ================= -->
+  <section id="painel-nova-regra" class="panel hidden">
+    <div class="panel-head">
+      <h2>Nova regra</h2>
+      <span class="hint">defina como extrair e mapear esta fonte</span>
+    </div>
+
+    <div class="form-grid">
+      <label>Nome da regra
+        <input id="nr-nome" type="text" placeholder="Ex.: Fundo XPTO — posição mensal">
+      </label>
+      <label>Tipo de arquivo
+        <select id="nr-tipo">
+          <option value="csv">CSV</option>
+          <option value="xlsx">Excel (.xlsx)</option>
+          <option value="pdf">PDF</option>
+        </select>
+      </label>
+      <label>Padrão de nome (com *)
+        <input id="nr-padrao" type="text" placeholder="Ex.: FIDC_XPTO_*.xlsx">
+      </label>
+      <label id="campo-aba">Aba principal (Excel)
+        <input id="nr-aba" type="text" placeholder="Ex.: Patrimonio">
+      </label>
+      <label id="campo-orientacao">Orientação da tabela
+        <select id="nr-orientacao">
+          <option value="horizontal">Horizontal — cabeçalho e dados lado a lado</option>
+          <option value="vertical">Vertical — cada campo em sua própria linha</option>
+        </select>
+      </label>
+      <label>Nome do CSV de saída desta regra
+        <input id="nr-saida" type="text" placeholder="Ex.: filtrado_cota_xpto.csv">
+      </label>
+    </div>
+
+    <div class="subpanel" id="subpanel-cabecalho">
+      <label class="checkbox-inline">
+        <input type="checkbox" id="nr-cabecalho-deslocado">
+        o cabeçalho não está na primeira linha (buscar em qualquer lugar da planilha/arquivo)
+      </label>
+      <div class="form-grid" id="campos-cabecalho-deslocado" style="display:none; margin-top:10px;">
+        <label>Palavras-chave do cabeçalho (separadas por vírgula)
+          <input id="nr-cabecalho-palavras" type="text" placeholder="Ex.: Ordem, Mnemônico">
+        </label>
+      </div>
+      <p class="field-hint" style="margin-top:8px;">O motor procura a linha que contém essas palavras (em qualquer lugar da planilha/arquivo) e lê todos os dados a partir dali, até acabar.</p>
+    </div>
+
+    <div class="subpanel">
+      <div class="subpanel-head">
+        <h3>Mapeamento de colunas de saída</h3>
+        <button id="btn-add-coluna" class="btn btn-mini">+ coluna</button>
+      </div>
+      <p class="field-hint" id="hint-pdf-mapeamento">Para PDF: em "vem da coluna...", digite o rótulo <strong>exatamente</strong> como aparece no PDF (ex.: DATA, COTA, PU) — não precisa ser igual ao nome de saída.</p>
+      <p class="field-hint" id="hint-xlsx-mapeamento">Para Excel: cada coluna diz de qual <strong>aba</strong> ela vem, se está na <strong>horizontal</strong> ou <strong>vertical</strong>, e se é <strong>fixa</strong> (só existe um valor, ex.: Carteira/CNPJ — repetido em todas as linhas) ou não (um valor por registro, ex.: Mnemônico/Valor Cota). As três informações são obrigatórias.</p>
+      <div id="colunas-mapeamento"></div>
+    </div>
+
+    <div class="subpanel">
+      <h3>Filtro de linhas (opcional)</h3>
+      <div class="form-grid form-grid-3">
+        <label>Coluna
+          <input id="nr-filtro-coluna" type="text" placeholder="Ex.: Ativo">
+        </label>
+        <label>Contém o texto
+          <input id="nr-filtro-contem" type="text" placeholder="Ex.: COTA">
+        </label>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button id="btn-salvar-regra" class="btn btn-accent">Salvar regra</button>
+      <button id="btn-cancelar-regra" class="btn btn-ghost">Cancelar</button>
+    </div>
+  </section>
+
+  <!-- ================= PROCESSAR ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>03 — Processar</h2>
+      <span class="hint">roda todas as regras ativas sobre os arquivos enviados</span>
+    </div>
+
+    <div class="process-bar">
+      <button id="btn-processar" class="btn btn-accent btn-lg">
+        <span class="btn-label">Processar arquivos</span>
+      </button>
+      <label class="checkbox-inline">
+        <input type="checkbox" id="chk-limpar">
+        apagar automaticamente os já processados ao final
+      </label>
+    </div>
+
+    <pre id="log-console" class="log-console" aria-live="polite"></pre>
+  </section>
+
+  <!-- ================= RESULTADO ================= -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>04 — Arquivos de saída</h2>
+      <span class="hint">um arquivo por regra — exatamente o "Nome do CSV de saída" configurado nela</span>
+    </div>
+    <div id="saidas-wrap">
+      <p class="empty-msg" id="saidas-empty" {{ 'style=display:none' if arquivos_saida else '' }}>Ainda não há arquivos de saída. Envie arquivos e clique em "Processar".</p>
+      <div id="lista-saidas" class="saida-list">
+        {% for nome in arquivos_saida %}
+        <div class="saida-card" data-nome="{{ nome }}">
+          <div class="saida-card-head">
+            <span class="saida-nome">{{ nome }}</span>
+            <a class="btn btn-mini btn-ghost" href="/download/saida/{{ nome }}">Baixar</a>
+          </div>
+          <div class="saida-preview-wrap"></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+</main>
+<footer class="contact-footer">
+  <p class="contact-title">Dúvidas? Chamar <strong>Guilherme Ryan</strong></p>
+  <div class="contact-list">
+    <a href="mailto:guilherme.nunes@sabemi.com.br">guilherme.nunes@sabemi.com.br</a>
+  </div>
+</footer>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
